@@ -181,6 +181,22 @@ fn adjusted_arm_span(cx: &LateContext<'_>, span: Span) -> Span {
         .unwrap_or(span)
 }
 
+/// Checks if any pair of patterns `(i, j)` with `i < j` for which `relevant(i, j)` returns
+/// `true` overlap in the values they can match, assuming they are all for the same type.
+pub(super) fn pats_have_overlapping_values(
+    cx: &LateContext<'_>,
+    pats: &[&Pat<'_>],
+    mut relevant: impl FnMut(usize, usize) -> bool,
+) -> bool {
+    let arena = DroplessArena::default();
+    let normalized: Vec<_> = pats
+        .iter()
+        .map(|&pat| NormalizedPat::from_pat(cx, &arena, pat))
+        .collect();
+    (0..pats.len())
+        .any(|i| ((i + 1)..pats.len()).any(|j| relevant(i, j) && normalized[i].has_overlapping_values(&normalized[j])))
+}
+
 #[derive(Clone, Copy)]
 enum NormalizedPat<'a> {
     Wild,

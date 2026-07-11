@@ -1,0 +1,168 @@
+#![warn(clippy::redundant_identity_match_arms)]
+#![allow(clippy::needless_match, clippy::manual_unwrap_or_default)]
+
+use std::io;
+
+fn is_recoverable(_e: &io::Error) -> bool {
+    true
+}
+
+fn operation() -> io::Result<()> {
+    Ok(())
+}
+
+// Case from uutils/coreutils#13362: identity arms around a guard arm.
+fn lint_result_with_guard() -> io::Result<()> {
+    match operation() {
+        Err(e) if is_recoverable(&e) => Ok(()),
+        res => res,
+    }
+}
+
+// Identity arms with a payload binding.
+fn lint_result_with_binding(res: Result<u32, String>) -> Result<u32, String> {
+    match res {
+        Err(s) if s.is_empty() => Err(String::from("empty")),
+        res => res,
+    }
+}
+
+// The final arm is already a catch-all binding: only the identity arm is removed.
+fn lint_existing_catch_all(res: Result<u32, String>) -> Result<u32, String> {
+    match res {
+        Err(s) if s.is_empty() => Err(String::from("empty")),
+        other => other,
+    }
+}
+
+// Options work too, and arm bodies may be wrapped in blocks.
+#[rustfmt::skip]
+fn lint_option(opt: Option<u32>) -> Option<u32> {
+    match opt {
+        Some(0) => None,
+        res => res,
+    }
+}
+
+enum Three {
+    A(u32),
+    B(u32),
+    C,
+}
+
+// Multiple identity arms collapse into one.
+fn lint_multiple_identity_arms(t: Three) -> Three {
+    match t {
+        Three::B(0) => Three::C,
+        res => res,
+    }
+}
+
+// A final whole-value binding arm proves the scrutinee type converts to the match
+// type, so types with lifetimes are fine here (seen in the `cc` crate).
+fn lint_str_mapping(s: &str) -> &str {
+    match s {
+        "i686" => "i386",
+        other => other,
+    }
+}
+
+enum Item<'a> {
+    Borrowed(&'a str),
+    Owned(String),
+    Empty,
+}
+
+// The identity arms only cover lifetime-free variants and rebuild the value, which
+// converts `Item<'a>` to `Item<'static>`; `res => res` would not compile (seen in
+// `chrono`'s `Item::to_owned`).
+fn no_lint_lifetime_laundering(item: Item<'_>) -> Item<'static> {
+    match item {
+        Item::Borrowed(s) => Item::Owned(s.to_string()),
+        Item::Owned(s) => Item::Owned(s),
+        Item::Empty => Item::Empty,
+    }
+}
+
+// All arms are identity: `needless_match` handles this, we must not.
+fn no_lint_all_identity(res: Result<u32, String>) -> Result<u32, String> {
+    match res {
+        Ok(v) => Ok(v),
+        Err(s) => Err(s),
+    }
+}
+
+// The identity arm shadows a later arm with an overlapping pattern; merging would
+// change which arm matches `Ok(0)`.
+fn no_lint_overlapping_later_arm(res: Result<u32, String>) -> Result<u32, String> {
+    match res {
+        Ok(0) => Ok(0),
+        Ok(v) if v > 10 => Ok(v - 1),
+        Ok(v) => Ok(v),
+        Err(s) => Err(s),
+    }
+}
+
+// A guard on an identity-looking arm means it is not a plain identity arm.
+fn no_lint_guarded_identity(res: Result<u32, String>) -> Result<u32, String> {
+    match res {
+        Ok(v) if v > 0 => Ok(v),
+        Ok(_) => Ok(0),
+        Err(s) => Err(s),
+    }
+}
+
+// The match type differs from the scrutinee type; `res => res` would not compile.
+fn no_lint_type_changes(res: Result<(), io::Error>) -> Result<(), String> {
+    match res {
+        Ok(()) => Ok(()),
+        Err(e) if is_recoverable(&e) => Ok(()),
+        Err(e) => Err(e.to_string()),
+    }
+}
+
+// The scrutinee is a reference: match ergonomics make the arms rebuild the value at a
+// different type, which the catch-all could not.
+fn no_lint_ref_scrutinee(res: &Result<u32, String>) -> Result<&u32, &String> {
+    match res {
+        Ok(v) => Ok(v),
+        Err(e) if e.is_empty() => Err(e),
+        Err(e) => Err(e),
+    }
+}
+
+// An attribute on any arm could be deleted or re-attached by the rewrite.
+fn no_lint_arm_attribute(res: Result<u32, String>) -> Result<u32, String> {
+    match res {
+        Ok(v) => Ok(v),
+        #[allow(unused_variables)]
+        Err(s) if s.is_empty() => Err(String::from("empty")),
+        Err(s) => Err(s),
+    }
+}
+
+// The final arm is not an identity arm.
+fn no_lint_last_arm_not_identity(res: Result<u32, String>) -> Result<u32, String> {
+    match res {
+        Ok(v) => Ok(v),
+        Err(s) if s.is_empty() => Err(s),
+        Err(_) => Err(String::from("nope")),
+    }
+}
+
+macro_rules! identity_match {
+    ($e:expr) => {
+        match $e {
+            Ok(()) => Ok(()),
+            Err(e) if is_recoverable(&e) => Ok(()),
+            Err(e) => Err(e),
+        }
+    };
+}
+
+// From a macro expansion: leave it alone.
+fn no_lint_macro() -> io::Result<()> {
+    identity_match!(operation())
+}
+
+fn main() {}

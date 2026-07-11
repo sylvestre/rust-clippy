@@ -1,0 +1,42 @@
+error: these arms return the matched value unchanged
+  --> tests/ui/redundant_identity_match_arms_unfixable.rs:10:9
+   |
+LL | /         Some(x) => {
+LL | |             // Identity, wrapped in a block.
+LL | |             Some(x)
+LL | |         },
+   | |_________^
+LL |
+LL |           None => None,
+   |           ^^^^^^^^^^^^
+   |
+   = note: `-D clippy::redundant-identity-match-arms` implied by `-D warnings`
+   = help: to override `-D warnings` add `#[allow(clippy::redundant_identity_match_arms)]`
+help: merge them into a single catch-all arm
+   |
+LL -         Some(x) => {
+LL -             // Identity, wrapped in a block.
+LL -             Some(x)
+LL -         },
+LL -
+LL -         None => None,
+LL +         res => res,
+   |
+
+error: these arms return the matched value unchanged
+  --> tests/ui/redundant_identity_match_arms_unfixable.rs:22:9
+   |
+LL |         Ok(v) => Ok(v),
+   |         ^^^^^^^^^^^^^^
+...
+LL |         Err(s) => Err(s),
+   |         ^^^^^^^^^^^^^^^^
+   |
+help: merge them into a single catch-all arm
+   |
+LL ~         Err(s) if s.is_empty() => Err(String::from("empty")),
+LL ~         res => res,
+   |
+
+error: aborting due to 2 previous errors
+

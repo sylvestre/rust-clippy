@@ -161,5 +161,27 @@ LL | |         err @ Err(_) => err,
 LL | |     };
    | |_____^ help: replace it with: `t`
 
-error: aborting due to 15 previous errors
+error: this match expression is unnecessary
+  --> tests/ui/needless_match.rs:382:25
+   |
+LL |       let _: (i32, i32) = match x {
+   |  _________________________^
+LL | |
+LL | |         (0, 0) => (0, 0),
+LL | |         (a, b) => (a, b),
+LL | |     };
+   | |_____^ help: replace it with: `x`
+
+error: this match expression is unnecessary
+  --> tests/ui/needless_match.rs:387:30
+   |
+LL |       let _: Result<(), i32> = match r {
+   |  ______________________________^
+LL | |
+LL | |         Ok(()) => Ok(()),
+LL | |         Err(e) => Err(e),
+LL | |     };
+   | |_____^ help: replace it with: `r`
+
+error: aborting due to 17 previous errors
 

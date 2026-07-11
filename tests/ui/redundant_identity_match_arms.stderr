@@ -1,0 +1,102 @@
+error: these arms return the matched value unchanged
+  --> tests/ui/redundant_identity_match_arms.rs:17:9
+   |
+LL |         Ok(()) => Ok(()),
+   |         ^^^^^^^^^^^^^^^^
+...
+LL |         Err(e) => Err(e),
+   |         ^^^^^^^^^^^^^^^^
+   |
+   = note: `-D clippy::redundant-identity-match-arms` implied by `-D warnings`
+   = help: to override `-D warnings` add `#[allow(clippy::redundant_identity_match_arms)]`
+help: merge them into a single catch-all arm
+   |
+LL ~         Err(e) if is_recoverable(&e) => Ok(()),
+LL ~         res => res,
+   |
+
+error: these arms return the matched value unchanged
+  --> tests/ui/redundant_identity_match_arms.rs:27:9
+   |
+LL |         Ok(v) => Ok(v),
+   |         ^^^^^^^^^^^^^^
+...
+LL |         Err(s) => Err(s),
+   |         ^^^^^^^^^^^^^^^^
+   |
+help: merge them into a single catch-all arm
+   |
+LL ~         Err(s) if s.is_empty() => Err(String::from("empty")),
+LL ~         res => res,
+   |
+
+error: these arms return the matched value unchanged
+  --> tests/ui/redundant_identity_match_arms.rs:37:9
+   |
+LL |         Ok(v) => Ok(v),
+   |         ^^^^^^^^^^^^^^
+...
+LL |         other => other,
+   |         ^^^^^^^^^^^^^^
+   |
+help: merge them into a single catch-all arm
+   |
+LL -         Ok(v) => Ok(v),
+LL -
+   |
+
+error: these arms return the matched value unchanged
+  --> tests/ui/redundant_identity_match_arms.rs:49:9
+   |
+LL | /         Some(x) => {
+LL | |             Some(x)
+LL | |         },
+   | |_________^
+LL |
+LL |           None => None,
+   |           ^^^^^^^^^^^^
+   |
+help: merge them into a single catch-all arm
+   |
+LL -         Some(x) => {
+LL -             Some(x)
+LL -         },
+LL -
+LL -         None => None,
+LL +         res => res,
+   |
+
+error: these arms return the matched value unchanged
+  --> tests/ui/redundant_identity_match_arms.rs:66:9
+   |
+LL |         Three::A(x) => Three::A(x),
+   |         ^^^^^^^^^^^^^^^^^^^^^^^^^^
+...
+LL |         Three::B(x) => Three::B(x),
+   |         ^^^^^^^^^^^^^^^^^^^^^^^^^^
+LL |         Three::C => Three::C,
+   |         ^^^^^^^^^^^^^^^^^^^^
+   |
+help: merge them into a single catch-all arm
+   |
+LL ~         Three::B(0) => Three::C,
+LL ~         res => res,
+   |
+
+error: these arms return the matched value unchanged
+  --> tests/ui/redundant_identity_match_arms.rs:78:9
+   |
+LL |         "i386" => "i386",
+   |         ^^^^^^^^^^^^^^^^
+...
+LL |         other => other,
+   |         ^^^^^^^^^^^^^^
+   |
+help: merge them into a single catch-all arm
+   |
+LL -         "i386" => "i386",
+LL -
+   |
+
+error: aborting due to 6 previous errors
+

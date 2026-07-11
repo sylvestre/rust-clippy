@@ -17,6 +17,7 @@ mod match_wild_err_arm;
 mod needless_match;
 mod overlapping_arms;
 mod redundant_guards;
+mod redundant_identity_match_arms;
 mod redundant_pattern_match;
 mod rest_pat_in_fully_bound_struct;
 mod significant_drop_in_scrutinee;
@@ -664,6 +665,50 @@ declare_clippy_lint! {
 
 declare_clippy_lint! {
     /// ### What it does
+    /// Checks for `match` expressions where several arms return the matched value
+    /// unchanged and could be merged into a single catch-all arm.
+    ///
+    /// ### Why is this bad?
+    /// The identity arms are unnecessarily verbose and obscure the arms that do
+    /// something interesting.
+    ///
+    /// ### Known problems
+    /// When the scrutinee type contains references or other lifetime-bearing types,
+    /// the lint only fires if the final arm already binds the whole matched value.
+    /// Rebuilding a value in an arm can change its lifetimes (e.g. `Item<'a>` to
+    /// `Item<'static>`), which a merged catch-all arm could not.
+    ///
+    /// ### Example
+    /// ```no_run
+    /// # fn is_recoverable(_: &std::io::Error) -> bool { true }
+    /// # fn operation() -> std::io::Result<()> { Ok(()) }
+    /// fn try_operation() -> std::io::Result<()> {
+    ///     match operation() {
+    ///         Ok(()) => Ok(()),
+    ///         Err(e) if is_recoverable(&e) => Ok(()),
+    ///         Err(e) => Err(e),
+    ///     }
+    /// }
+    /// ```
+    /// Use instead:
+    /// ```no_run
+    /// # fn is_recoverable(_: &std::io::Error) -> bool { true }
+    /// # fn operation() -> std::io::Result<()> { Ok(()) }
+    /// fn try_operation() -> std::io::Result<()> {
+    ///     match operation() {
+    ///         Err(e) if is_recoverable(&e) => Ok(()),
+    ///         res => res,
+    ///     }
+    /// }
+    /// ```
+    #[clippy::version = "1.99.0"]
+    pub REDUNDANT_IDENTITY_MATCH_ARMS,
+    complexity,
+    "match arms returning the matched value unchanged that can be merged into one catch-all arm"
+}
+
+declare_clippy_lint! {
+    /// ### What it does
     /// Lint for redundant pattern matching over `Result`, `Option`,
     /// `std::task::Poll`, `std::net::IpAddr` or `bool`s
     ///
@@ -1027,6 +1072,7 @@ impl_lint_pass!(Matches => [
     MATCH_WILD_ERR_ARM,
     NEEDLESS_MATCH,
     REDUNDANT_GUARDS,
+    REDUNDANT_IDENTITY_MATCH_ARMS,
     REDUNDANT_PATTERN_MATCHING,
     REST_PAT_IN_FULLY_BOUND_STRUCTS,
     SIGNIFICANT_DROP_IN_SCRUTINEE,
@@ -1128,6 +1174,7 @@ impl<'tcx> LateLintPass<'tcx> for Matches {
                     match_wild_enum::check(cx, ex, arms);
                     match_as_ref::check(cx, ex, arms, expr);
                     needless_match::check_match(cx, ex, arms, expr);
+                    redundant_identity_match_arms::check(cx, ex, arms, expr);
                     match_str_case_mismatch::check(cx, ex, arms);
                     redundant_guards::check(cx, arms, self.msrv);
 

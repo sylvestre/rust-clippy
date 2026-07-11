@@ -351,6 +351,7 @@ pub static LINTS: &[&::declare_clippy_lint::LintInfo] = &[
     crate::matches::MATCH_WILDCARD_FOR_SINGLE_VARIANTS_INFO,
     crate::matches::NEEDLESS_MATCH_INFO,
     crate::matches::REDUNDANT_GUARDS_INFO,
+    crate::matches::REDUNDANT_IDENTITY_MATCH_ARMS_INFO,
     crate::matches::REDUNDANT_PATTERN_MATCHING_INFO,
     crate::matches::REST_PAT_IN_FULLY_BOUND_STRUCTS_INFO,
     crate::matches::SIGNIFICANT_DROP_IN_SCRUTINEE_INFO,

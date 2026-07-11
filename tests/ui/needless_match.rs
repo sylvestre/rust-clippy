@@ -377,4 +377,18 @@ fn issue14754(t: Result<i32, &'static str>) -> Result<i32, &'static str> {
     x
 }
 
+// Tuple patterns count as identity arms, including the unit `()` payload.
+fn tuple_identity_arms(x: (i32, i32), r: Result<(), i32>) {
+    let _: (i32, i32) = match x {
+        //~^ needless_match
+        (0, 0) => (0, 0),
+        (a, b) => (a, b),
+    };
+    let _: Result<(), i32> = match r {
+        //~^ needless_match
+        Ok(()) => Ok(()),
+        Err(e) => Err(e),
+    };
+}
+
 fn main() {}

@@ -155,7 +155,7 @@ fn expr_ty_matches_p_ty(cx: &LateContext<'_>, expr: &Expr<'_>, p_expr: &Expr<'_>
     false
 }
 
-fn pat_same_as_expr(pat: &Pat<'_>, expr: &Expr<'_>) -> bool {
+pub(super) fn pat_same_as_expr(pat: &Pat<'_>, expr: &Expr<'_>) -> bool {
     match (&pat.kind, &expr.kind) {
         // Example: `Some(val) => Some(val)`
         (PatKind::TupleStruct(QPath::Resolved(_, path), tuple_params, _), ExprKind::Call(call_expr, call_params)) => {
@@ -189,6 +189,10 @@ fn pat_same_as_expr(pat: &Pat<'_>, expr: &Expr<'_>) -> bool {
             return over(p_path.segments, e_path.segments, |p_seg, e_seg| {
                 p_seg.ident.name == e_seg.ident.name
             });
+        },
+        // Example: `Ok(()) => Ok(())`, or `(a, b) => (a, b)`
+        (PatKind::Tuple(pats, dotdot), ExprKind::Tup(exprs)) => {
+            return dotdot.as_opt_usize().is_none() && same_non_ref_symbols(pats, exprs);
         },
         // Example: `5 => 5`
         (PatKind::Expr(pat_expr_expr), ExprKind::Lit(expr_spanned)) => {
